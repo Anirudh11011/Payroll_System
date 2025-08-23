@@ -5,3 +5,4 @@ use App\Http\Controllers\EmployeeController;
 
 Route::get('/stats/employees/count', [EmployeeController::class, 'count']);
 Route::get('/employees', [EmployeeController::class, 'index']);
+Route::post('/employees/add', [EmployeeController::class, 'store']);

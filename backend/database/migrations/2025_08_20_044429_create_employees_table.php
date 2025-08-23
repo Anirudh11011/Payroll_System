@@ -17,6 +17,8 @@ public function up(): void
         $table->string('first_name');
         $table->string('last_name');
         $table->string('email')->unique();
+        $table->string('role')->nullable();
+        $table->string('department')->nullable();
         $table->boolean('active')->default(true);
         $table->timestamps();
     });

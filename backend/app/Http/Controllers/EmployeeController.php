@@ -29,7 +29,30 @@ class EmployeeController extends Controller
         }
 
         return $query->orderByDesc('id')->paginate($request->integer('per_page', 20));
-        // If you truly want *all* rows without pagination, use:
-        // return $query->orderByDesc('id')->get();
+        
     }
+
+    public function store(Request $request)
+{
+    
+    $data = $request->validate([
+        //'employee_code' => 'required|string|max:50|unique:employees,employee_code',
+        'first_name'    => 'required|string|max:100',
+        'last_name'     => 'required|string|max:100',
+        'email'         => 'required|email|unique:employees,email',
+        'role'          => 'nullable|string|max:100',     // optional fields
+        'department'    => 'nullable|string|max:100',
+        'active'        => 'boolean',
+    ]);
+
+        if (empty($data['employee_code'])) {
+        $latestId = Employee::max('id') + 1;
+        $data['employee_code'] = 'EMP' . str_pad($latestId, 4, '0', STR_PAD_LEFT);
+    }
+
+    $employee = \App\Models\Employee::create($data);
+
+    
+    return response()->json($employee, 201);
+}
 }

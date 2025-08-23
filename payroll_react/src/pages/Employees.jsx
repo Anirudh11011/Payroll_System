@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import AddEmployeeModal from "../Components/AddEmployeeModal";
+
 
 const fallbackEmployees = [
   { id: 1, name: "Alicia Stone", role: "Frontend Engineer", department: "Engineering", email: "alicia@company.com", status: "Active" },
@@ -6,6 +8,10 @@ const fallbackEmployees = [
   { id: 3, name: "Priya N.", role: "HR Generalist", department: "Human Resources", email: "priya@company.com", status: "On Leave" },
   { id: 4, name: "Diego Alvarez", role: "Data Analyst", department: "Analytics", email: "diego@company.com", status: "Inactive" },
 ];
+
+
+
+
 
 function StatusPill({ value }) {
   const color =
@@ -24,6 +30,33 @@ export default function Employees() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+
+
+  const handleCreateEmployee = async (newEmp) => {
+  try {
+    const res = await fetch("/api/employees/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newEmp),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const saved = await res.json();
+    const newMapped = {
+      id: saved.id,
+      name: `${saved.first_name} ${saved.last_name}`.trim(),
+      role: saved.role || "",
+      department: saved.department || "",
+      email: saved.email || "",
+      status: saved.active ? "Active" : "Inactive",
+    };
+    setEmployees((prev) => [...prev, newMapped]);
+  } catch (e) {
+    alert("Failed to create employee: " + e.message);
+  }
+};
+
 
 useEffect(() => {
   let cancelled = false;
@@ -73,9 +106,13 @@ useEffect(() => {
   }, [employees, query]);
 
   return (
+
+    
+    
     <div style={{ padding: 24 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <h1 style={{ margin: 0 }}>Employees</h1>
+        <div style={{ display: "flex", gap: 8 }}>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -87,6 +124,8 @@ useEffect(() => {
             width: 320,
           }}
         />
+        <button style={btn} onClick={() => setIsModalOpen(true)}>Create</button>
+        </div>
       </div>
 
       {loading ? (
@@ -136,6 +175,11 @@ useEffect(() => {
           </table>
         </div>
       )}
+      <AddEmployeeModal
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      onCreate={handleCreateEmployee}
+    />
     </div>
   );
 }
