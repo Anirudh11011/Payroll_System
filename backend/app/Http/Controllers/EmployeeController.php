@@ -34,25 +34,30 @@ class EmployeeController extends Controller
 
     public function store(Request $request)
 {
-    
     $data = $request->validate([
-        //'employee_code' => 'required|string|max:50|unique:employees,employee_code',
-        'first_name'    => 'required|string|max:100',
-        'last_name'     => 'required|string|max:100',
-        'email'         => 'required|email|unique:employees,email',
-        'role'          => 'nullable|string|max:100',     // optional fields
-        'department'    => 'nullable|string|max:100',
-        'active'        => 'boolean',
+        'first_name'       => 'required|string|max:100',
+        'last_name'        => 'required|string|max:100',
+        'email'            => 'required|email|unique:employees,email',
+        'gender'           => 'nullable|in:male,female,other',
+        'date_of_birth'    => 'nullable|date',
+        'role_id'          => 'nullable|exists:roles,id',
+        'department_id'    => 'nullable|exists:departments,id',
+        'job_title_id'     => 'nullable|exists:job_titles,id',
+        'leaves_remaining' => 'nullable|integer|min:0',
+        'active'           => 'boolean',
     ]);
 
-        if (empty($data['employee_code'])) {
+    if (empty($data['employee_code'])) {
         $latestId = Employee::max('id') + 1;
         $data['employee_code'] = 'EMP' . str_pad($latestId, 4, '0', STR_PAD_LEFT);
     }
 
-    $employee = \App\Models\Employee::create($data);
+    $employee = Employee::create($data);
 
-    
+    // eager load relationships for React
+    $employee->load(['role', 'department', 'jobTitle']);
+
     return response()->json($employee, 201);
 }
+
 }

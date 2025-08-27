@@ -34,24 +34,46 @@ export default function Employees() {
 
 
 
-  const handleCreateEmployee = async (newEmp) => {
+ const handleCreateEmployee = async (newEmp) => {
   try {
     const res = await fetch("/api/employees/add", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newEmp),
+      body: JSON.stringify({
+        first_name: newEmp.first_name,
+        last_name: newEmp.last_name,
+        email: newEmp.email,
+        gender: newEmp.gender,
+        date_of_birth: newEmp.date_of_birth,
+        role_id: newEmp.role_id,             // dropdown value (id)
+        department_id: newEmp.department_id, // dropdown value (id)
+        job_title_id: newEmp.job_title_id,   // dropdown value (id)
+        leaves_remaining: newEmp.leaves_remaining || 0,
+        active: newEmp.active ?? true,
+      }),
     });
+
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
     const saved = await res.json();
+
+    // ✅ map backend response (which includes relations) into your flat UI structure
     const newMapped = {
       id: saved.id,
-      name: `${saved.first_name} ${saved.last_name}`.trim(),
-      role: saved.role || "",
-      department: saved.department || "",
+      name: `${saved.first_name ?? ""} ${saved.last_name ?? ""}`.trim(),
+      role: saved.role?.name || "",               // comes from related table
+      department: saved.department?.name || "",   // comes from related table
+      job_title: saved.job_title?.title || "",    // comes from related table
       email: saved.email || "",
       status: saved.active ? "Active" : "Inactive",
+      gender: saved.gender || "",
+      dob: saved.date_of_birth || "",
+      leaves: saved.leaves_remaining ?? 0,
     };
+
+    // ✅ update frontend state
     setEmployees((prev) => [...prev, newMapped]);
+
   } catch (e) {
     alert("Failed to create employee: " + e.message);
   }
@@ -72,13 +94,16 @@ useEffect(() => {
 
       const rows = Array.isArray(payload) ? payload : (payload.data || []);
       const mapped = rows.map(r => ({
-        id: r.id,
-        name: `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim(),
-        role: r.role ?? "",               // not in DB yet → default empty
-        department: r.department ?? "",   // not in DB yet → default empty
-        email: r.email ?? "",
-        status: (r.active ? "Active" : "Inactive"),
-      }));
+  id: r.id,
+  name: `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim(),
+  role: r.role?.name ?? "",             // comes from relation
+  department: r.department?.name ?? "", // comes from relation
+  email: r.email ?? "",
+  status: (r.active ? "Active" : "Inactive"),
+  gender: r.gender ?? "",
+  dob: r.date_of_birth ?? "",
+  leaves: r.leaves_remaining ?? 0,
+}));
 
       if (!cancelled) setEmployees(mapped);
     } catch (e) {
@@ -134,46 +159,54 @@ useEffect(() => {
         <p style={{ color: "crimson" }}>{err}</p>
       ) : (
         <div style={{ overflowX: "auto", border: "1px solid #e5e7eb", borderRadius: 12 }}>
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
-            <thead style={{ background: "#f8fafc" }}>
-              <tr>
-                <th style={th}>Name</th>
-                <th style={th}>Role</th>
-                <th style={th}>Department</th>
-                <th style={th}>Email</th>
-                <th style={th}>Status</th>
-                <th style={{ ...th, textAlign: "right" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((e, idx) => (
-                <tr key={e.id ?? idx} style={{ background: idx % 2 ? "#ffffff" : "#fbfdff" }}>
-                  <td style={td}>{e.name}</td>
-                  <td style={td}>{e.role}</td>
-                  <td style={td}>{e.department}</td>
-                  <td style={td}>{e.email}</td>
-                  <td style={td}>
-                    <StatusPill value={e.status || "Active"} />
-                  </td>
-                  <td style={{ ...td }}>
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                      <button style={btn} onClick={() => alert(`View ${e.name}`)}>View</button>
-                      <button style={btnOutline} onClick={() => alert(`Edit ${e.name}`)}>Edit</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+  <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+    <thead style={{ background: "#f8fafc" }}>
+      <tr>
+        <th style={th}>Name</th>
+        <th style={th}>Role</th>
+        <th style={th}>Department</th>
+        <th style={th}>Job Title</th>
+        <th style={th}>Email</th>
+        <th style={th}>Gender</th>
+        <th style={th}>DOB</th>
+        <th style={th}>Leaves</th>
+        <th style={th}>Status</th>
+        <th style={{ ...th, textAlign: "right" }}>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {filtered.map((e, idx) => (
+        <tr key={e.id ?? idx} style={{ background: idx % 2 ? "#ffffff" : "#fbfdff" }}>
+          <td style={td}>{e.name}</td>
+          <td style={td}>{e.role}</td>
+          <td style={td}>{e.department}</td>
+          <td style={td}>{e.job_title}</td>
+          <td style={td}>{e.email}</td>
+          <td style={td}>{e.gender}</td>
+          <td style={td}>{e.dob}</td>
+          <td style={td}>{e.leaves}</td>
+          <td style={td}>
+            <StatusPill value={e.status || "Active"} />
+          </td>
+          <td style={{ ...td }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button style={btn} onClick={() => alert(`View ${e.name}`)}>View</button>
+              <button style={btnOutline} onClick={() => alert(`Edit ${e.name}`)}>Edit</button>
+            </div>
+          </td>
+        </tr>
+      ))}
 
-              {filtered.length === 0 && (
-                <tr>
-                  <td style={{ ...td, textAlign: "center" }} colSpan={6}>
-                    No employees found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {filtered.length === 0 && (
+        <tr>
+          <td style={{ ...td, textAlign: "center" }} colSpan={10}>
+            No employees found.
+          </td>
+        </tr>
+      )}
+    </tbody>
+  </table>
+</div>
       )}
       <AddEmployeeModal
       isOpen={isModalOpen}
