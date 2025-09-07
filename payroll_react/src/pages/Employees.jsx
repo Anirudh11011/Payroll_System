@@ -32,7 +32,44 @@ export default function Employees() {
   const [err, setErr] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  //chatbot
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
+
+  //chatbot 
+  const handleChatSend = async () => {
+  if (!chatInput.trim()) return;
+
+  const userMessage = chatInput.trim();
+  setChatMessages(prev => [...prev, { role: "user", content: userMessage }]);
+  setChatInput("");
+  setChatLoading(true);
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/chatbot/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: userMessage }),
+    });
+
+    const payload = await res.json();
+
+    if (payload.error) {
+      setChatMessages(prev => [...prev, { role: "bot", content: "❌ " + payload.error }]);
+    } else {
+      // Prefer natural language generation (if you send results back to LLM)
+      const answer = payload.answer || JSON.stringify(payload.data || payload.sql);
+      setChatMessages(prev => [...prev, { role: "bot", content: answer }]);
+    }
+  } catch (e) {
+    setChatMessages(prev => [...prev, { role: "bot", content: "❌ Failed to fetch response." }]);
+  } finally {
+    setChatLoading(false);
+  }
+};
 
  const handleCreateEmployee = async (newEmp) => {
   try {
@@ -213,6 +250,67 @@ useEffect(() => {
       onClose={() => setIsModalOpen(false)}
       onCreate={handleCreateEmployee}
     />
+    <div style={{ position: "fixed", bottom: 20, right: 20 }}>
+  {!chatOpen ? (
+    <button
+      style={{ ...btn, borderRadius: "50%", width: 60, height: 60 }}
+      onClick={() => setChatOpen(true)}
+    >
+      💬
+    </button>
+  ) : (
+    <div style={{
+      width: 320,
+      height: 400,
+      background: "#fff",
+      border: "1px solid #ccc",
+      borderRadius: 12,
+      display: "flex",
+      flexDirection: "column",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+    }}>
+      <div style={{ padding: "10px 12px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between" }}>
+        <strong>Chatbot</strong>
+        <button onClick={() => setChatOpen(false)} style={{ border: "none", background: "transparent", cursor: "pointer" }}>✖</button>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: 12 }}>
+        {chatMessages.map((m, i) => (
+          <div key={i} style={{
+            textAlign: m.role === "user" ? "right" : "left",
+            marginBottom: 10,
+            fontSize: 14
+          }}>
+            <div style={{
+              display: "inline-block",
+              background: m.role === "user" ? "#dbeafe" : "#f3f4f6",
+              color: "#111",
+              padding: "8px 10px",
+              borderRadius: 8,
+              maxWidth: "80%"
+            }}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {chatLoading && <p>🤖 Thinking…</p>}
+      </div>
+      <div style={{ borderTop: "1px solid #eee", padding: 8 }}>
+        <input
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleChatSend()}
+          placeholder="Ask about employees…"
+          style={{
+            width: "100%",
+            padding: "8px 10px",
+            borderRadius: 8,
+            border: "1px solid #ccc",
+          }}
+        />
+      </div>
+    </div>
+  )}
+</div>
     </div>
   );
 }
